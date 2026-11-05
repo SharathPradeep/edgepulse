@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "name": "DeviceMetric",
+  "namespace": "com.edgepulse.gateway",
+  "doc": "Periodic health sample from a gateway.",
+  "fields": [
+    {"name": "event_id", "type": "string"},
+    {"name": "event_type", "type": "string"},
+    {"name": "device_id", "type": "string"},
+    {"name": "tenant_id", "type": "string"},
+    {"name": "product_version", "type": "string"},
+    {"name": "event_ts", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "schema_version", "type": "int"},
+    {"name": "cpu_pct", "type": "double"},
+    {"name": "mem_pct", "type": "double"},
+    {"name": "active_connections", "type": "int"},
+    {"name": "throughput_mbps", "type": "double"}
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "type": "record",
+  "name": "WafAlert",
+  "namespace": "com.edgepulse.gateway",
+  "doc": "A web application firewall rule matched a request.",
+  "fields": [
+    {"name": "event_id", "type": "string"},
+    {"name": "event_type", "type": "string"},
+    {"name": "device_id", "type": "string"},
+    {"name": "tenant_id", "type": "string"},
+    {"name": "product_version", "type": "string"},
+    {"name": "event_ts", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "schema_version", "type": "int"},
+    {"name": "rule_id", "type": "string"},
+    {"name": "severity", "type": "string", "doc": "low, medium, high or critical."},
+    {"name": "action", "type": "string", "doc": "blocked or flagged."},
+    {"name": "attack_category", "type": "string"},
+    {"name": "request_id", "type": "string"},
+    {"name": "details", "type": "string", "doc": "JSON string with match details."}
+  ]
+}
