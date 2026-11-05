@@ -1,0 +1,23 @@
+{
+  "type": "record",
+  "name": "RequestLog",
+  "namespace": "com.edgepulse.gateway",
+  "doc": "One HTTP request handled by an app-delivery gateway.",
+  "fields": [
+    {"name": "event_id", "type": "string", "doc": "Unique event identifier, used for deduplication."},
+    {"name": "event_type", "type": "string", "doc": "Always request_log for this topic."},
+    {"name": "device_id", "type": "string", "doc": "Gateway that produced the event. Also the Kafka message key."},
+    {"name": "tenant_id", "type": "string", "doc": "Customer that owns the gateway."},
+    {"name": "product_version", "type": "string", "doc": "Gateway software version."},
+    {"name": "event_ts", "type": {"type": "long", "logicalType": "timestamp-millis"}, "doc": "When the request happened on the device (event time, UTC)."},
+    {"name": "schema_version", "type": "int", "doc": "Contract version the producer used."},
+    {"name": "method", "type": "string"},
+    {"name": "path", "type": "string"},
+    {"name": "status_code", "type": "int"},
+    {"name": "latency_ms", "type": "double"},
+    {"name": "bytes_out", "type": "long"},
+    {"name": "client_ip", "type": "string", "doc": "PII. Hashed in silver."},
+    {"name": "client_region", "type": "string"},
+    {"name": "headers", "type": {"type": "map", "values": "string"}, "doc": "Semi-structured request headers."}
+  ]
+}
