@@ -28,6 +28,7 @@ SR_URL = os.getenv("SCHEMA_REGISTRY_URL", "http://localhost:8081")
 CONFIG_PATH = Path(os.getenv("TOPICS_CONFIG", Path(__file__).resolve().parent / "topics.yml"))
 
 REQUIRED_FIELDS = ["event_id", "device_id", "tenant_id", "event_ts"]
+CRASH_AFTER_WRITE = os.getenv("CRASH_AFTER_WRITE") == "1"   # fault switch for the resilience drill
 
 running = True
 
@@ -62,6 +63,21 @@ def validate(record):
     if record["event_ts"] > datetime.now(timezone.utc) + timedelta(minutes=5):
         return "event_ts more than 5 minutes in the future"
     return None
+
+
+def route_message(msg, deserializer):
+    """Decide where one Kafka message goes. Returns ("ok", record) or ("dlq", error text)."""
+    try:
+        record = deserializer(msg.value(), SerializationContext(msg.topic(), MessageField.VALUE))
+    except Exception as exc:  # noqa: BLE001
+        return "dlq", f"deserialisation failed: {exc}"
+    error = validate(record) if isinstance(record, dict) else "not a record"
+    if error:
+        return "dlq", error
+    record["_kafka_partition"] = msg.partition()
+    record["_kafka_offset"] = msg.offset()
+    record["_ingest_ts"] = datetime.now(timezone.utc)
+    return "ok", record
 
 
 WRITER = None
@@ -118,6 +134,9 @@ def main():
             print(f"Flushing batch: {total} good records, {dlq_count} sent to DLQ")
             write_batch(batches, routes)
             dlq.flush(10)
+            if CRASH_AFTER_WRITE:
+                print("CRASH_AFTER_WRITE set: exiting after the write but before the offset commit")
+                os._exit(1)
             consumer.commit(asynchronous=False)   # commit only after the write succeeded
         batches = {t: [] for t in routes}
         batch_started = time.monotonic()
@@ -129,21 +148,12 @@ def main():
                 if msg.error():
                     print(f"Kafka error: {msg.error()}")
                     continue
-                try:
-                    record = deserializer(msg.value(), SerializationContext(msg.topic(), MessageField.VALUE))
-                except Exception as exc:  # noqa: BLE001
-                    send_to_dlq(msg, f"deserialisation failed: {exc}")
+                outcome, payload = route_message(msg, deserializer)
+                if outcome == "dlq":
+                    send_to_dlq(msg, payload)
                     dlq_count += 1
-                    continue
-                error = validate(record) if isinstance(record, dict) else "not a record"
-                if error:
-                    send_to_dlq(msg, error)
-                    dlq_count += 1
-                    continue
-                record["_kafka_partition"] = msg.partition()
-                record["_kafka_offset"] = msg.offset()
-                record["_ingest_ts"] = datetime.now(timezone.utc)
-                batches[msg.topic()].append(record)
+                else:
+                    batches[msg.topic()].append(payload)
             dlq.poll(0)
             total = sum(len(v) for v in batches.values())
             if total >= max_records or time.monotonic() - batch_started >= max_seconds:
