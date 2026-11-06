@@ -1,0 +1,33 @@
+name: edgepulse
+version: "1.0.0"
+config-version: 2
+profile: edgepulse
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+target-path: target
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  edgepulse:
+    silver:
+      +schema: ep_silver
+      +table_type: iceberg
+      +materialized: table
+    gold:
+      +schema: ep_gold
+      +table_type: iceberg
+      +materialized: table
+
+seeds:
+  edgepulse:
+    +schema: ep_silver
+    +table_type: iceberg
+    device_registry:
+      +column_types: {device_id: varchar, tenant_id: varchar, product_version: varchar, region: varchar}
+    waf_rules:
+      +column_types: {rule_id: varchar, attack_category: varchar}
+    http_status_codes:
+      +column_types: {status_code: integer, status_text: varchar, status_class: varchar, is_error: boolean}

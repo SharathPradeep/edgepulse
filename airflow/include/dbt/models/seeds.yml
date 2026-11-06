@@ -1,0 +1,18 @@
+version: 2
+
+seeds:
+  - name: device_registry
+    description: The gateway fleet (200 devices) with tenant, software version and region. Exported from generator/registry.py.
+    columns:
+      - name: device_id
+        data_tests: [unique, not_null]
+  - name: waf_rules
+    description: WAF rule catalogue mapping each rule to its attack category.
+    columns:
+      - name: rule_id
+        data_tests: [unique, not_null]
+  - name: http_status_codes
+    description: HTTP status codes with their class and whether they count as errors.
+    columns:
+      - name: status_code
+        data_tests: [unique, not_null]

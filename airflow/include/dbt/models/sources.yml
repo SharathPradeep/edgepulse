@@ -1,0 +1,26 @@
+version: 2
+
+sources:
+  - name: bronze
+    schema: ep_bronze
+    description: Raw gateway telemetry appended every minute by the ingestion consumer (Iceberg on S3).
+    config:
+      loaded_at_field: _ingest_ts
+      freshness:
+        warn_after: {count: 15, period: minute}
+        error_after: {count: 60, period: minute}
+    tables:
+      - name: request_log
+        description: One row per HTTP request handled by a gateway, as received from Kafka.
+        columns:
+          - name: event_id
+            description: Unique event identifier. Duplicates are possible in bronze and removed in silver.
+          - name: client_ip
+            description: Client IP address. PII, hashed in silver.
+            meta: {pii: true}
+          - name: _kafka_offset
+            description: Kafka offset of the source message, for lineage and replay.
+      - name: waf_alert
+        description: One row per web application firewall match.
+      - name: device_metric
+        description: Periodic gateway health samples (CPU, memory, connections, throughput).

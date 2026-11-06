@@ -226,3 +226,6 @@ __marimo__/
 target/
 logs/
 .DS_Store
+.venv-dbt/
+airflow/include/dbt/target/
+airflow/include/dbt/.user.yml

@@ -1,0 +1,16 @@
+# No secrets here: credentials come from the edgepulse AWS CLI profile.
+edgepulse:
+  target: dev
+  outputs:
+    dev:
+      type: athena
+      region_name: eu-north-1
+      aws_profile_name: edgepulse
+      work_group: edgepulse
+      database: awsdatacatalog
+      schema: ep_silver
+      s3_staging_dir: s3://edgepulse-lake-sharath-0001/athena-results/dbt/
+      s3_data_dir: s3://edgepulse-lake-sharath-0001/
+      s3_data_naming: schema_table
+      threads: 4
+      num_retries: 3

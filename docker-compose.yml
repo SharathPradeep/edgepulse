@@ -69,3 +69,22 @@ services:
       DUPLICATE_RATE: "0"
       LATE_RATE: "0"
       POISON_RATE: "0"
+  
+  consumer:
+    build:
+      context: .
+      dockerfile: ingestion/Dockerfile
+    container_name: consumer
+    profiles: ["pipeline"]
+    restart: unless-stopped
+    stop_grace_period: 60s
+    depends_on:
+      - kafka
+      - schema-registry
+    environment:
+      BOOTSTRAP: kafka:29092
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      AWS_PROFILE: edgepulse
+      AWS_REGION: eu-north-1
+    volumes:
+      - ~/.aws:/root/.aws:ro
