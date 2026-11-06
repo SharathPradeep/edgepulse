@@ -1,9 +1,9 @@
-"""EdgePulse ingestion consumer (Block 1.4 skeleton).
+"""EdgePulse ingestion consumer.
 
 Reads the three gateway topics, decodes each message against its registered
 Avro contract, routes anything undecodable or invalid to the dead-letter topic
-and collects good records into micro-batches. In Block 2.1, write_batch()
-becomes a PyIceberg append to bronze; here it only reports what it would write.
+and collects good records into micro-batches that are appended to Iceberg bronze
+tables on S3 through the Glue catalogue (see bronze_writer.py).
 
 Delivery guarantee: at-least-once. Offsets are committed only after a batch
 has been written, so a crash before the write means the batch is re-read,
@@ -20,6 +20,8 @@ from confluent_kafka import Consumer, Producer
 from confluent_kafka.schema_registry import SchemaRegistryClient
 from confluent_kafka.schema_registry.avro import AvroDeserializer
 from confluent_kafka.serialization import MessageField, SerializationContext
+
+from bronze_writer import BronzeWriter
 
 BOOTSTRAP = os.getenv("BOOTSTRAP", "localhost:9092")
 SR_URL = os.getenv("SCHEMA_REGISTRY_URL", "http://localhost:8081")
@@ -62,11 +64,20 @@ def validate(record):
     return None
 
 
+WRITER = None
+
+
 def write_batch(batches, routes):
-    """Block 1.4 stub. Block 2.1 replaces this with a PyIceberg append per table."""
+    """Append each topic's records to its Iceberg bronze table, retrying each table separately."""
+    global WRITER
+    if WRITER is None:
+        WRITER = BronzeWriter()
     for topic, records in batches.items():
-        if records:
-            print(f"  would write {len(records):>5} records to {routes[topic]['target_table']}")
+        if not records:
+            continue
+        route = routes[topic]
+        rows = with_retries(lambda: WRITER.append(topic, route["target_table"], route["partition_column"], records))
+        print(f"  wrote {rows:>5} records to {route['target_table']}")
 
 
 def main():
@@ -105,7 +116,7 @@ def main():
         total = sum(len(v) for v in batches.values())
         if total or dlq_count:
             print(f"Flushing batch: {total} good records, {dlq_count} sent to DLQ")
-            with_retries(lambda: write_batch(batches, routes))
+            write_batch(batches, routes)
             dlq.flush(10)
             consumer.commit(asynchronous=False)   # commit only after the write succeeded
         batches = {t: [] for t in routes}
