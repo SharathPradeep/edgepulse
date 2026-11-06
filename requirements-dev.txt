@@ -1,0 +1,2 @@
+pytest>=8
+pyiceberg[sql-sqlite]>=0.10,<0.12

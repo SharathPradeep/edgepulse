@@ -225,3 +225,4 @@ __marimo__/
 .venv/
 target/
 logs/
+.DS_Store
