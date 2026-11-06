@@ -66,8 +66,8 @@ services:
       BOOTSTRAP: kafka:29092
       SCHEMA_REGISTRY_URL: http://schema-registry:8081
       RATE: "20"
-      DUPLICATE_RATE: "0"
-      LATE_RATE: "0"
+      DUPLICATE_RATE: ${DUPLICATE_RATE:-0}
+      LATE_RATE: ${LATE_RATE:-0}
       POISON_RATE: "0"
   
   consumer:

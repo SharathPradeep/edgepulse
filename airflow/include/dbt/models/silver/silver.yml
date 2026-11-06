@@ -1,0 +1,39 @@
+version: 2
+
+models:
+  - name: stg_request_log
+    description: One row per unique request. Client IP hashed, headers parsed, late arrivals flagged.
+    columns:
+      - name: event_id
+        data_tests: [unique, not_null]
+      - name: device_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('device_registry'), field: device_id}
+      - name: status_code
+        data_tests:
+          - relationships:
+              arguments: {to: ref('http_status_codes'), field: status_code}
+      - name: client_ip_hash
+        data_tests: [not_null]
+
+  - name: stg_waf_alert
+    description: One row per unique WAF match with details parsed from JSON.
+    columns:
+      - name: event_id
+        data_tests: [unique, not_null]
+      - name: rule_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('waf_rules'), field: rule_id}
+      - name: severity
+        data_tests:
+          - accepted_values:
+              arguments: {values: [low, medium, high, critical]}
+
+  - name: stg_device_metric
+    description: One row per unique device health sample.
+    columns:
+      - name: event_id
+        data_tests: [unique, not_null]

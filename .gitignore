@@ -229,3 +229,4 @@ logs/
 .venv-dbt/
 airflow/include/dbt/target/
 airflow/include/dbt/.user.yml
+.vscode

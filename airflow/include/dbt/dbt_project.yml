@@ -10,6 +10,10 @@ test-paths: ["tests"]
 target-path: target
 clean-targets: ["target", "dbt_packages"]
 
+vars:
+  lookback_hours: 2
+  late_after_minutes: 15
+
 models:
   edgepulse:
     silver:
