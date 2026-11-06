@@ -1,0 +1,16 @@
+# Metadata-driven ingestion config: adding an event type means adding an entry here, not new code.
+consumer:
+  group_id: edgepulse-bronze-loader   # consumer group: Kafka tracks this group's position per partition
+  batch_max_records: 5000             # write a batch when it reaches this many records...
+  batch_max_seconds: 60               # ...or when this many seconds have passed, whichever comes first
+dlq_topic: gateway.dlq
+topics:
+  - topic: gateway.request_log
+    target_table: ep_bronze.request_log
+    partition_column: event_ts
+  - topic: gateway.waf_alert
+    target_table: ep_bronze.waf_alert
+    partition_column: event_ts
+  - topic: gateway.device_metric
+    target_table: ep_bronze.device_metric
+    partition_column: event_ts
