@@ -1,0 +1,84 @@
+version: 2
+
+models:
+  - name: dim_device
+    description: One row per gateway, from the device registry.
+    columns:
+      - name: device_id
+        data_tests: [unique, not_null]
+
+  - name: dim_waf_rule
+    description: One row per WAF rule with its attack category.
+    columns:
+      - name: rule_id
+        data_tests: [unique, not_null]
+
+  - name: fct_request_hourly
+    description: Requests per device per hour. Latency digest allows accurate percentiles at any level.
+    latest_version: 2
+    config:
+      contract: {enforced: true}
+    columns:
+      - name: device_hour_key
+        data_type: varchar
+        data_tests: [unique, not_null]
+      - name: device_id
+        data_type: varchar
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_device'), field: device_id}
+      - name: event_hour
+        data_type: timestamp(6)
+      - name: request_count
+        data_type: bigint
+      - name: client_error_count
+        data_type: bigint
+      - name: server_error_count
+        data_type: bigint
+      - name: error_rate
+        data_type: double
+      - name: p50_latency_ms
+        data_type: double
+      - name: p95_latency_ms
+        data_type: double
+      - name: latency_digest
+        data_type: varbinary
+      - name: bytes_out
+        data_type: bigint
+      - name: late_count
+        data_type: bigint
+      - name: _source_max_ingest_ts
+        data_type: timestamp(6)
+    versions:
+      - v: 2
+      - v: 1
+        deprecation_date: 2026-12-31
+        columns:
+          - include: all
+            exclude: [client_error_count, server_error_count]
+          - name: error_count
+            data_type: bigint
+
+  - name: fct_waf_alert
+    description: One row per WAF alert, enriched with the rule catalogue.
+    columns:
+      - name: event_id
+        data_tests: [unique, not_null]
+      - name: device_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_device'), field: device_id}
+      - name: rule_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_waf_rule'), field: rule_id}
+
+  - name: fct_device_health_hourly
+    description: Device health per hour. Average and peak CPU, memory and connections.
+    columns:
+      - name: device_hour_key
+        data_tests: [unique, not_null]
+      - name: device_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_device'), field: device_id}

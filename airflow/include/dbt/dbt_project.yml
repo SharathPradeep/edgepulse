@@ -24,6 +24,10 @@ models:
       +schema: ep_gold
       +table_type: iceberg
       +materialized: table
+      dim_device:
+        +s3_data_naming: schema_table_unique
+      dim_waf_rule:
+        +s3_data_naming: schema_table_unique
 
 seeds:
   edgepulse:
