@@ -23,7 +23,7 @@ select
     device_id,
     tenant_id,
     product_version,
-    cast(event_ts as timestamp(6)) as event_ts,
+    cast(event_ts as {{ ts_type() }}) as event_ts,
     schema_version,
     method,
     path,
@@ -37,6 +37,6 @@ select
     date_diff('minute', event_ts, _ingest_ts) > {{ var('late_after_minutes') }} as is_late,
     _kafka_partition,
     _kafka_offset,
-    cast(_ingest_ts as timestamp(6)) as _ingest_ts
+    cast(_ingest_ts as {{ ts_type() }}) as _ingest_ts
 from deduped
 where rn = 1

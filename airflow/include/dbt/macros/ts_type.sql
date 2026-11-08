@@ -1,0 +1,1 @@
+{% macro ts_type() -%}timestamp(6){%- endmacro %}

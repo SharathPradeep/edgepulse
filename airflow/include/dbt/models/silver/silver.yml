@@ -37,3 +37,28 @@ models:
     columns:
       - name: event_id
         data_tests: [unique, not_null]
+
+unit_tests:
+  - name: dedup_keeps_latest_arrival
+    description: Two copies of the same event_id collapse to one row and the latest arrival wins.
+    model: stg_request_log
+    overrides:
+      macros:
+        is_incremental: false
+        ts_type: "timestamp(3)"
+    given:
+      - input: source('bronze', 'request_log')
+        format: sql
+        rows: |
+          select * from (values
+            ('e1', 'request_log', 'dev-0001', 't-01', '17.1', timestamp '2026-11-08 10:00:00 UTC', 1, 'GET', '/', 200, 10.0e0, bigint '100', '1.1.1.1', 'eu-north', map(array['user-agent'], array['curl/8.4']), 0, bigint '10', timestamp '2026-11-08 10:01:00 UTC'),
+            ('e1', 'request_log', 'dev-0001', 't-01', '17.1', timestamp '2026-11-08 10:00:00 UTC', 1, 'GET', '/', 200, 10.0e0, bigint '100', '1.1.1.1', 'eu-north', map(array['user-agent'], array['curl/8.4']), 0, bigint '25', timestamp '2026-11-08 10:05:00 UTC'),
+            ('e2', 'request_log', 'dev-0002', 't-02', '17.5', timestamp '2026-11-08 10:02:00 UTC', 1, 'GET', '/', 500, 20.0e0, bigint '100', '2.2.2.2', 'eu-north', map(array['user-agent'], array['curl/8.4']), 1, bigint '12', timestamp '2026-11-08 10:03:00 UTC')
+          ) as t(event_id, event_type, device_id, tenant_id, product_version, event_ts, schema_version,
+                 method, path, status_code, latency_ms, bytes_out, client_ip, client_region, headers,
+                 _kafka_partition, _kafka_offset, _ingest_ts)
+    expect:
+      rows:
+        - {event_id: e1, _kafka_offset: 25}
+        - {event_id: e2, _kafka_offset: 12}
+  

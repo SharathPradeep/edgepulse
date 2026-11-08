@@ -16,6 +16,9 @@ vars:
 
 models:
   edgepulse:
+    +persist_docs:
+      relation: true
+      columns: true 
     silver:
       +schema: ep_silver
       +table_type: iceberg
