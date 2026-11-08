@@ -82,3 +82,28 @@ models:
         data_tests:
           - relationships:
               arguments: {to: ref('dim_device'), field: device_id}
+  - name: feat_device_anomaly_hourly
+    description: ML features per device per hour. Rolling 24h z-scores (current hour excluded), lags, completeness and lateness.
+    config:
+      meta:
+        owner: product-data
+        sla: "Rebuilt hourly over the last 14 days"
+        contains_pii: false
+    columns:
+      - name: device_hour_key
+        data_tests: [unique, not_null]
+      - name: product_version
+        description: Version the device reported at event time, falling back to the registry.
+        data_tests: [not_null]
+      - name: request_count_z
+        data_tests: [not_null]
+      - name: p95_latency_z
+        data_tests: [not_null]
+      - name: error_rate_z
+        data_tests: [not_null]
+      - name: cpu_z
+        data_tests: [not_null]
+      - name: completeness_24h
+        data_tests: [not_null]
+      - name: lateness_ratio
+        data_tests: [not_null]

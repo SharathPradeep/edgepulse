@@ -13,6 +13,7 @@ clean-targets: ["target", "dbt_packages"]
 vars:
   lookback_hours: 2
   late_after_minutes: 15
+  feature_days: 14
 
 models:
   edgepulse:
