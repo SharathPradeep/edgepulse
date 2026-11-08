@@ -1,0 +1,12 @@
+status_code,status_text,status_class,is_error
+200,OK,2xx,false
+201,Created,2xx,false
+204,No Content,2xx,false
+301,Moved Permanently,3xx,false
+400,Bad Request,4xx,true
+401,Unauthorized,4xx,true
+403,Forbidden,4xx,true
+404,Not Found,4xx,true
+500,Internal Server Error,5xx,true
+502,Bad Gateway,5xx,true
+503,Service Unavailable,5xx,true

@@ -230,3 +230,4 @@ logs/
 airflow/include/dbt/target/
 airflow/include/dbt/.user.yml
 .vscode
+!airflow/include/dbt/seeds/*.csv

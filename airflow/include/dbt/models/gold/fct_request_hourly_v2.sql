@@ -3,6 +3,7 @@
     table_type='iceberg',
     incremental_strategy='merge',
     unique_key='device_hour_key',
+    update_condition='src._source_max_ingest_ts > target._source_max_ingest_ts',
     on_schema_change='fail',
     partitioned_by=['day(event_hour)']
 ) }}

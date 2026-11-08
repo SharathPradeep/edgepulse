@@ -1,0 +1,7 @@
+rule_id,attack_category
+WAF-1001,sqli
+WAF-1002,sqli
+WAF-2001,xss
+WAF-3001,bot
+WAF-4001,path_traversal
+WAF-5001,rate_limit

@@ -4,6 +4,7 @@
     incremental_strategy='merge',
     unique_key='event_id',
     on_schema_change='append_new_columns',
+    update_condition='src._ingest_ts > target._ingest_ts',
     partitioned_by=['day(event_ts)']
 ) }}
 
