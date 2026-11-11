@@ -2,7 +2,7 @@
 
 A streaming data platform that turns raw events from a simulated fleet of 200 app-delivery gateways (request logs, web application firewall alerts and health metrics) into trusted, documented, tested data for dashboards and anomaly detection.
 
-**Stack:** Apache Kafka (KRaft), Confluent Schema Registry with Avro, Apache Iceberg on Amazon S3, AWS Glue Data Catalog, Amazon Athena, dbt Core with dbt-athena, Python, Docker, pytest. Airflow 3 with Astronomer Cosmos and GitHub Actions are in progress.
+**Stack:** Apache Kafka (KRaft), Confluent Schema Registry with Avro, Apache Iceberg on Amazon S3, AWS Glue Data Catalog, Amazon Athena, dbt Core with dbt-athena, Python, Docker, pytest. Orchestrated with Airflow 3 and Astronomer Cosmos. GitHub Actions CI is in progress.
 
 ## Status
 
@@ -15,7 +15,8 @@ A streaming data platform that turns raw events from a simulated fleet of 200 ap
 | ML feature table (rolling z-scores, lags, completeness, lateness) | Done |
 | Tests: pytest, dbt unit, generic and singular | Done |
 | Performance baseline and Iceberg maintenance | Done |
-| Airflow orchestration with Cosmos, quality checks to `ep_ops` | In progress |
+| Airflow 3 orchestration with Cosmos (hourly, one task per dbt model) | Done |
+| Pipeline health checks to `ep_ops.dq_results`, freshness gate, failure alerts | Done |
 | Failure drill, runbooks and RCA | In progress |
 | CI with schema compatibility gate | Planned |
 
@@ -73,6 +74,8 @@ Full reasoning is in [`docs/adr/`](docs/adr/).
 - **dbt singular tests:** no event times in the future, and every bronze event up to the silver watermark exists in silver.
 - **Source freshness** on bronze: warn after 15 minutes, error after 60.
 - `dbt build` skips everything downstream of a failed test, so bad data never reaches gold.
+- **Pipeline health checks** (duplicate rate, late rate, hourly volume, dead-row ratio) run hourly beside gold, write to `ep_ops.dq_results` and alert on failure. A bronze **freshness gate** blocks silver if data is over 60 minutes old.
+- DLQ volume is not checked from Airflow, because Kafka runs on a separate Docker network. In production it would come from Amazon MSK or CloudWatch metrics.
 
 ## Results
 
@@ -101,6 +104,8 @@ From [`docs/perf.md`](docs/perf.md), measured on the same day before and after m
 | Iceberg table models failed with "unique table location" | dbt-athena builds a new table beside the old one and swaps by rename | Unique S3 naming for table models only |
 | Unit test fixtures failed on map and timestamp types | dbt-athena casts fixture columns with Glue type names and runs unit tests through millisecond-precision Hive tables | SQL-format fixtures and a timestamp-type macro overridden in the test |
 | Seeds were created as Hive tables | Seeds do not inherit model configuration | Set the Iceberg table type for seeds explicitly |
+| Airflow image build failed on `mmh3` | The Astro image runs Python 3.14 and dbt-athena pins an `mmh3` version with no 3.14 wheel, so it had to compile without a C compiler | Added `build-essential` to `packages.txt` |
+| Cosmos tasks failed with `No module named 'airflow.providers.amazon'` | Cosmos's Athena profile mapping reads AWS credentials through the Amazon provider | Added `apache-airflow-providers-amazon` to `requirements.txt` |
 
 ## Running it
 
@@ -148,7 +153,6 @@ docker-compose.yml      Kafka, Schema Registry, Kafka UI, generator, consumer
 
 ## Roadmap
 
-- Airflow 3 with Astronomer Cosmos: one task per dbt model, freshness checks, quality checks written to `ep_ops.dq_results`, retries and failure callbacks.
 - Scheduled Iceberg maintenance (compaction and snapshot expiry) and backfills from the Airflow UI.
 - Failure drill: request_log v2 schema rollout, a duplicate incident with targeted backfill and Iceberg time travel, plus runbooks and an RCA.
 - GitHub Actions: ruff, pytest, dbt parse and a schema compatibility gate that fails a breaking contract change.

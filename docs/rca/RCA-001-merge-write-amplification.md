@@ -78,7 +78,7 @@ The lookback is kept, so late batches are still picked up and late events still 
 
 | Action | Status |
 |---|---|
-| Add a dead-row ratio check per merged table to the Airflow quality checks, writing to `ep_ops.dq_results`. Warn above 20% | Planned (Block 4.2) |
+| Add a dead-row ratio check per merged table to the Airflow quality checks, writing to `ep_ops.dq_results`. Warn above 20% | Done. Runs hourly in `run_dq_checks`, warn above 20%, error above 50% |
 | Schedule OPTIMIZE and VACUUM on recent partitions | Planned (Block 4.3) |
 | Rerun `scripts/perf_baseline.py` after each maintenance run and track the trend | Planned |
 | Review checklist for incremental models: does the merge rewrite unchanged rows? | Done (added to README lessons learned) |
