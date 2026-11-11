@@ -19,6 +19,7 @@ A streaming data platform that turns raw events from a simulated fleet of 200 ap
 | Pipeline health checks to `ep_ops.dq_results`, freshness gate, failure alerts | Done |
 | Failure drill, runbooks and RCA | In progress |
 | CI with schema compatibility gate | Planned |
+| Weekly Iceberg maintenance DAG (OPTIMIZE and VACUUM) and backfills | Done |
 
 ## Architecture
 
@@ -106,6 +107,7 @@ From [`docs/perf.md`](docs/perf.md), measured on the same day before and after m
 | Seeds were created as Hive tables | Seeds do not inherit model configuration | Set the Iceberg table type for seeds explicitly |
 | Airflow image build failed on `mmh3` | The Astro image runs Python 3.14 and dbt-athena pins an `mmh3` version with no 3.14 wheel, so it had to compile without a C compiler | Added `build-essential` to `packages.txt` |
 | Cosmos tasks failed with `No module named 'airflow.providers.amazon'` | Cosmos's Athena profile mapping reads AWS credentials through the Amazon provider | Added `apache-airflow-providers-amazon` to `requirements.txt` |
+| Athena OPTIMIZE failed with "Unexpected FilterNode" | OPTIMIZE only accepts filters it can map straight to partitions, and a computed `current_timestamp - interval` is not one | Used Airflow-templated literal dates (`{{ macros.ds_add(ds, -7) }}`) aligned to the day partitions |
 
 ## Running it
 
