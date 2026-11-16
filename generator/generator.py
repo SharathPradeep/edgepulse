@@ -7,6 +7,7 @@ inject duplicates, late events and poison messages for the failure drills.
 import json
 import os
 import random
+import re
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -29,10 +30,12 @@ CONTRACTS = Path(os.getenv("CONTRACTS_DIR", Path(__file__).resolve().parent.pare
 
 # kind -> (topic, contract file, share of traffic)
 TOPICS = {
-    "request_log": ("gateway.request_log", "request_log_v1.avsc", 0.80),
+    "request_log": ("gateway.request_log", "request_log_v2.avsc", 0.80),
     "waf_alert": ("gateway.waf_alert", "waf_alert_v1.avsc", 0.05),
     "device_metric": ("gateway.device_metric", "device_metric_v1.avsc", 0.15),
 }
+# schema_version stamped on each event comes from the contract file in use (request_log_v2.avsc -> 2)
+SCHEMA_VERSIONS = {kind: int(re.search(r"_v(\d+)\.avsc$", f).group(1)) for kind, (_, f, _) in TOPICS.items()}
 
 
 def envelope(event_type, dev):
@@ -46,7 +49,7 @@ def envelope(event_type, dev):
         "tenant_id": dev["tenant_id"],
         "product_version": dev["product_version"],
         "event_ts": ts,
-        "schema_version": 1,
+        "schema_version": SCHEMA_VERSIONS[event_type],
     }
 
 
@@ -68,6 +71,8 @@ def request_log(dev):
             "user-agent": random.choice(["Mozilla/5.0", "curl/8.4", "okhttp/4.12"]),
             "x-request-id": str(uuid.uuid4()),
         },
+        # v2 field: optional, null when the client used plain HTTP
+        "tls_version": random.choices(["TLSv1.3", "TLSv1.2", None], weights=[70, 25, 5])[0],
     }
 
 

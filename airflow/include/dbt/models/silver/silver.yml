@@ -17,6 +17,11 @@ models:
               arguments: {to: ref('http_status_codes'), field: status_code}
       - name: client_ip_hash
         data_tests: [not_null]
+      - name: tls_version
+        description: TLS version negotiated with the client (contract v2). Null for plain HTTP and for events produced before v2.
+        data_tests:
+          - accepted_values:
+              arguments: {values: [TLSv1.2, TLSv1.3]}
 
   - name: stg_waf_alert
     description: One row per unique WAF match with details parsed from JSON.
@@ -51,12 +56,12 @@ unit_tests:
         format: sql
         rows: |
           select * from (values
-            ('e1', 'request_log', 'dev-0001', 't-01', '17.1', timestamp '2026-11-08 10:00:00 UTC', 1, 'GET', '/', 200, 10.0e0, bigint '100', '1.1.1.1', 'eu-north', map(array['user-agent'], array['curl/8.4']), 0, bigint '10', timestamp '2026-11-08 10:01:00 UTC'),
-            ('e1', 'request_log', 'dev-0001', 't-01', '17.1', timestamp '2026-11-08 10:00:00 UTC', 1, 'GET', '/', 200, 10.0e0, bigint '100', '1.1.1.1', 'eu-north', map(array['user-agent'], array['curl/8.4']), 0, bigint '25', timestamp '2026-11-08 10:05:00 UTC'),
-            ('e2', 'request_log', 'dev-0002', 't-02', '17.5', timestamp '2026-11-08 10:02:00 UTC', 1, 'GET', '/', 500, 20.0e0, bigint '100', '2.2.2.2', 'eu-north', map(array['user-agent'], array['curl/8.4']), 1, bigint '12', timestamp '2026-11-08 10:03:00 UTC')
+            ('e1', 'request_log', 'dev-0001', 't-01', '17.1', timestamp '2026-11-08 10:00:00 UTC', 1, 'GET', '/', 200, 10.0e0, bigint '100', '1.1.1.1', 'eu-north', map(array['user-agent'], array['curl/8.4']), 0, bigint '10', timestamp '2026-11-08 10:01:00 UTC', cast(null as varchar)),
+            ('e1', 'request_log', 'dev-0001', 't-01', '17.1', timestamp '2026-11-08 10:00:00 UTC', 1, 'GET', '/', 200, 10.0e0, bigint '100', '1.1.1.1', 'eu-north', map(array['user-agent'], array['curl/8.4']), 0, bigint '25', timestamp '2026-11-08 10:05:00 UTC', cast(null as varchar)),
+            ('e2', 'request_log', 'dev-0002', 't-02', '17.5', timestamp '2026-11-08 10:02:00 UTC', 2, 'GET', '/', 500, 20.0e0, bigint '100', '2.2.2.2', 'eu-north', map(array['user-agent'], array['curl/8.4']), 1, bigint '12', timestamp '2026-11-08 10:03:00 UTC', 'TLSv1.3')
           ) as t(event_id, event_type, device_id, tenant_id, product_version, event_ts, schema_version,
                  method, path, status_code, latency_ms, bytes_out, client_ip, client_region, headers,
-                 _kafka_partition, _kafka_offset, _ingest_ts)
+                 _kafka_partition, _kafka_offset, _ingest_ts, tls_version)
     expect:
       rows:
         - {event_id: e1, _kafka_offset: 25}

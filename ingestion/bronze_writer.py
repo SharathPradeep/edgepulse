@@ -3,6 +3,9 @@
 - Table columns come from the latest registered Avro contract, plus Kafka lineage columns.
 - Tables are created on first write, partitioned by day(event_ts).
 - If a newer contract adds fields, the table schema is widened (union by name) before the append.
+- Records are never silently narrowed: if a record carries a field the cached "latest" contract
+  lacks, the registry client is rebuilt to drop its cache and the contract is read again. If the
+  field is still unknown, the batch fails, so offsets are not committed and nothing is lost.
 """
 import json
 import os
@@ -46,6 +49,11 @@ def arrow_schema_from_avro(avro_schema_str):
     return pa.schema(fields + LINEAGE_FIELDS)
 
 
+def _unknown_fields(records, arrow_schema):
+    """Fields present in the records but not in the schema. pa.Table.from_pylist would drop them silently."""
+    return sorted({name for record in records for name in record} - set(arrow_schema.names))
+
+
 class BronzeWriter:
     def __init__(self, catalog=None, schema_registry=None):
         self.catalog = catalog or load_catalog("glue", **{
@@ -54,7 +62,10 @@ class BronzeWriter:
             "client.profile-name": PROFILE,
             "py-io-impl": "pyiceberg.io.fsspec.FsspecFileIO",
         })
-        self.sr = schema_registry or SchemaRegistryClient({"url": SR_URL})
+        # A factory, so a stale client cache can be dropped by building a fresh client
+        self._new_registry = (lambda: schema_registry) if schema_registry else (
+            lambda: SchemaRegistryClient({"url": SR_URL}))
+        self.sr = self._new_registry()
         self._tables = {}
 
     def latest_arrow_schema(self, topic):
@@ -76,6 +87,13 @@ class BronzeWriter:
 
     def append(self, topic, identifier, partition_column, records):
         arrow_schema = self.latest_arrow_schema(topic)
+        if _unknown_fields(records, arrow_schema):
+            # A producer is ahead of our cached contract (newer client libraries cache "latest").
+            self.sr = self._new_registry()
+            arrow_schema = self.latest_arrow_schema(topic)
+            unknown = _unknown_fields(records, arrow_schema)
+            if unknown:
+                raise ValueError(f"{topic}: records carry fields missing from the latest contract: {unknown}")
         table = self._table(identifier, arrow_schema, partition_column)
         current = set(table.schema().column_names)
         if any(name not in current for name in arrow_schema.names):

@@ -35,6 +35,7 @@ select
     client_region,
     element_at(headers, 'user-agent') as user_agent,
     element_at(headers, 'x-request-id') as header_request_id,
+    tls_version,
     date_diff('minute', event_ts, _ingest_ts) > {{ var('late_after_minutes') }} as is_late,
     _kafka_partition,
     _kafka_offset,
