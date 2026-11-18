@@ -1,5 +1,7 @@
 {% macro changed_hours_filter(silver_model) %}
-  {% if is_incremental() %}
+  {% if is_incremental() and is_reprocess() %}
+  {{ reprocess_window_filter('event_ts') }}
+  {% elif is_incremental() %}
   where date_trunc('hour', event_ts) in (
       select distinct date_trunc('hour', event_ts)
       from {{ silver_model }}

@@ -1,41 +1,16 @@
 """Hourly EdgePulse pipeline: bronze freshness gate, silver, then gold and data quality checks."""
 import time
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
+
 
 from airflow.exceptions import AirflowFailException
 from airflow.sdk import dag, get_current_context, task
-from cosmos import DbtTaskGroup, ExecutionConfig, ProfileConfig, ProjectConfig, RenderConfig
+from cosmos import DbtTaskGroup, RenderConfig
 from cosmos.constants import SourceRenderingBehavior, TestBehavior
-from cosmos.profiles import AthenaAccessKeyProfileMapping
 
 from include.alerts import notify_failure
+from include.cosmos_config import execution_config, profile_config, project_config
 from include.dq.checks import CHECKS, evaluate
-
-DBT_PROJECT = Path("/usr/local/airflow/include/dbt")
-DBT_EXECUTABLE = "/usr/local/airflow/dbt_venv/bin/dbt"
-
-profile_config = ProfileConfig(
-    profile_name="edgepulse",
-    target_name="dev",
-    profile_mapping=AthenaAccessKeyProfileMapping(
-        conn_id="aws_edgepulse",
-        profile_args={
-            "database": "awsdatacatalog",
-            "schema": "ep_silver",
-            "region_name": "eu-north-1",
-            "work_group": "edgepulse",
-            "s3_staging_dir": "s3://edgepulse-lake-sharath-0001/athena-results/dbt/",
-            "s3_data_dir": "s3://edgepulse-lake-sharath-0001/",
-            "s3_data_naming": "schema_table",
-            "threads": 4,
-            "num_retries": 3,
-        },
-    ),
-)
-
-project_config = ProjectConfig(DBT_PROJECT)
-execution_config = ExecutionConfig(dbt_executable_path=DBT_EXECUTABLE)
 
 default_args = {
     "retries": 2,
