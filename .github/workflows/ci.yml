@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Least privilege: CI only needs to read the code
+permissions:
+  contents: read
+
+# A newer push to the same branch cancels the older run
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Lint and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"          # same as the generator and consumer images
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            ingestion/requirements.txt
+            generator/requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Lint (ruff)
+        run: ruff check .
+      - name: Unit tests (pytest)
+        run: pytest -q tests
+
+  dbt:
+    name: dbt parse
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EP_PII_SALT: ci-placeholder-not-a-secret   # models read it while parsing; nothing is hashed in CI
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dbt.txt
+      - name: Install dbt
+        run: pip install -r requirements-dbt.txt
+      - name: Parse the project (no AWS connection needed)
+        working-directory: airflow/include/dbt
+        run: dbt parse
+
+  contracts:
+    name: Schema compatibility gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Start Kafka and Schema Registry from the project's compose file
+        run: docker compose up -d schema-registry
+      - name: Wait for Schema Registry
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8081/subjects > /dev/null && echo "Schema Registry is up" && exit 0
+            sleep 2
+          done
+          echo "::error::Schema Registry did not start"
+          docker compose logs schema-registry
+          exit 1
+      - name: Register every contract version in order (fails on a breaking change)
+        run: python contracts/register_schemas.py
+      - name: Prove the gate rejects a breaking contract
+        run: |
+          status=0
+          output=$(python contracts/register_schemas.py --check tests/fixtures/request_log_breaking.avsc) || status=$?
+          echo "$output"
+          if [ "$status" -eq 1 ] && grep -q INCOMPATIBLE <<< "$output"; then
+            echo "Breaking contract rejected, as expected"
+          else
+            echo "::error::The gate did not reject a breaking contract"
+            exit 1
+          fi
+      - name: Stop containers
+        if: always()
+        run: docker compose down

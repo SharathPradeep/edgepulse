@@ -1,2 +1,6 @@
+# Everything needed to lint and test locally or in CI: pip install -r requirements-dev.txt
+-r ingestion/requirements.txt
+-r generator/requirements.txt
 pytest>=8
 pyiceberg[sql-sqlite]>=0.10,<0.12
+ruff==0.16.9

@@ -1,0 +1,10 @@
+# Lint settings used locally and in CI. Rules are listed explicitly so a new
+# ruff release cannot change what passes.
+target-version = "py313"
+line-length = 120
+extend-exclude = ["airflow/.astro", ".venv*"]
+
+[lint]
+# E4, E7, E9: real errors (bad imports, statements, syntax). F: pyflakes (unused
+# names, undefined names). B: bugbear (likely bugs such as loop variables in closures).
+select = ["E4", "E7", "E9", "F", "B"]

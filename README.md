@@ -18,7 +18,7 @@ A streaming data platform that turns raw events from a simulated fleet of 200 ap
 | Airflow 3 orchestration with Cosmos (hourly, one task per dbt model) | Done |
 | Pipeline health checks to `ep_ops.dq_results`, freshness gate, failure alerts | Done |
 | Failure drill, runbooks and RCA | Done ([runbooks](docs/runbooks/README.md), [RCA-002](docs/rca/RCA-002-silver-damaged-during-duplicate-incident.md)) |
-| CI with schema compatibility gate | Planned |
+| CI with schema compatibility gate (GitHub Actions) | Done |
 | Weekly Iceberg maintenance DAG (OPTIMIZE and VACUUM) and backfills | Done |
 
 ## Architecture

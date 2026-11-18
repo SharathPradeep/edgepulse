@@ -9,6 +9,7 @@ Delivery guarantee: at-least-once. Offsets are committed only after a batch
 has been written, so a crash before the write means the batch is re-read,
 never lost. Duplicates this can cause are removed in silver (merge on event_id).
 """
+import functools
 import os
 import signal
 import time
@@ -92,7 +93,9 @@ def write_batch(batches, routes):
         if not records:
             continue
         route = routes[topic]
-        rows = with_retries(lambda: WRITER.append(topic, route["target_table"], route["partition_column"], records))
+        # partial binds this iteration's values now, so each retry writes exactly this topic's batch
+        append = functools.partial(WRITER.append, topic, route["target_table"], route["partition_column"], records)
+        rows = with_retries(append)
         print(f"  wrote {rows:>5} records to {route['target_table']}")
 
 
